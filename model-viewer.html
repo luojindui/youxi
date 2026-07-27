@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D 模型预览器 - meng</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a14;font-family:'PingFang SC','Microsoft YaHei',sans-serif;overflow:hidden;height:100vh}
+#canvas{display:block}
+#ui{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none}
+#ui>*{pointer-events:auto}
+#toolbar{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:8px;flex-wrap:wrap;justify-content:center;z-index:10;max-width:95vw;max-height:140px;overflow-y:auto;padding:4px}
+.btn{padding:10px 16px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(20,20,50,.85);color:#ccc;cursor:pointer;font-size:14px;backdrop-filter:blur(10px);transition:all .2s}
+.btn:hover{border-color:rgba(255,255,255,.5);color:#fff;background:rgba(40,40,80,.9)}
+.btn.active{border-color:#e94560;color:#e94560;background:rgba(60,20,30,.9);box-shadow:0 0 12px rgba(233,69,96,.3)}
+#info{position:absolute;top:16px;left:16px;color:#aaa;font-size:13px;line-height:1.6;background:rgba(10,10,20,.8);padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(8px);max-width:260px}
+#info .name{color:#e94560;font-size:17px;font-weight:700;margin-bottom:4px}
+#info .label{color:#666}
+#loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:20}
+#loading .bar{width:260px;height:6px;background:rgba(255,255,255,.1);border-radius:3px;margin:12px auto;overflow:hidden}
+#loading .fill{height:100%;background:linear-gradient(90deg,#e94560,#ff6b6b);border-radius:3px;transition:width .3s;width:0%}
+#loading .text{color:#888;font-size:13px}
+#hint{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.35);font-size:12px;z-index:5;text-align:center}
+#anim-bar{position:absolute;top:16px;right:16px;background:rgba(10,10,20,.8);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 14px;backdrop-filter:blur(8px);color:#ccc;font-size:13px;min-width:180px;display:none}
+#anim-bar .anim-title{color:#666;margin-bottom:6px}
+#anim-bar .anim-btn{display:inline-block;margin:2px 4px 2px 0;padding:4px 10px;border:1px solid rgba(255,255,255,.15);border-radius:5px;background:rgba(255,255,255,.05);color:#aaa;cursor:pointer;font-size:12px;transition:all .2s}
+#anim-bar .anim-btn:hover{color:#fff;border-color:#e94560}
+#anim-bar .anim-btn.paused{color:#e94560;border-color:#e94560}
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<div id="loading">
+  <div class="text" id="loadText">加载模型...</div>
+  <div class="bar"><div class="fill" id="loadFill"></div></div>
+  <div class="text" id="loadPercent">0%</div>
+</div>
+
+<div id="ui">
+  <div id="info">
+    <div class="name" id="modelName">太阳系</div>
+    <div class="label">三角面: <span id="tris">--</span></div>
+    <div class="label">节点: <span id="nodes">--</span></div>
+    <div class="label">动画: <span id="anims">--</span></div>
+    <div class="label">骨骼: <span id="bones">--</span></div>
+    <div class="label">材质: <span id="matType">--</span></div>
+    <div class="label">顶点色: <span id="hasVC">--</span></div>
+  </div>
+
+  <div id="anim-bar">
+    <div class="anim-title">🎬 动画</div>
+    <div id="animBtns"></div>
+  </div>
+
+  <div id="toolbar">
+    <button class="btn" data-model="太阳系">🌌 太阳系</button>
+    <button class="btn" data-model="宇航员">🚀 宇航员</button>
+    <button class="btn" data-model="恐龙">🦕 恐龙</button>
+    <button class="btn" data-model="狗">🐕 狗</button>
+    <button class="btn" data-model="飞碟">🛸 飞碟</button>
+    <button class="btn" data-model="飞碟1">🛸 飞碟1</button>
+    <button class="btn" data-model="骨骼">🦴 骨骼</button>
+    <button class="btn" data-model="机器人">🤖 机器人</button>
+    <button class="btn" data-model="大眼怪">👁 大眼怪</button>
+    <button class="btn" data-model="树怪">🌳 树怪</button>
+    <button class="btn" data-model="草怪">🌿 草怪</button>
+    <button class="btn" data-model="雪怪">❄️ 雪怪</button>
+    <button class="btn" data-model="鱼怪">🐟 鱼怪</button>
+    <button class="btn" data-model="翼龙">🦅 翼龙</button>
+    <button class="btn" data-model="矮哥布林">👺 矮哥布林</button>
+    <button class="btn" data-model="矮哥布林2">👺 矮哥布林2</button>
+    <button class="btn" data-model="高哥布林">👹 高哥布林</button>
+    <button class="btn" data-model="普通子弹">🔫 普通子弹</button>
+    <button class="btn" data-model="火子弹">🔥 火子弹</button>
+    <button class="btn" data-model="毒子弹">☠️ 毒子弹</button>
+    <button class="btn" data-model="地图1">🗺 地图1</button>
+    <button class="btn active" data-model="地图2">🗺 地图2</button>
+    <button class="btn" data-model="地图3">🗺 地图3</button>
+    <button class="btn" data-model="地图4">🗺 地图4</button>
+  </div>
+
+  <div id="hint">🖱 拖拽旋转 · 滚轮缩放 · 右键平移</div>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import { initViewer } from './js/viewer.js';
+initViewer();
+</script>
+</body>
+</html>

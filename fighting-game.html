@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🥊 星际格斗 - 宇航员大战怪兽</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;font-family:'PingFang SC','Microsoft YaHei',sans-serif;overflow:hidden;height:100vh;cursor:default}
+#canvas{display:block}
+#loading{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:100}
+#loading .bar{width:300px;height:6px;background:rgba(255,255,255,.1);border-radius:3px;margin:16px auto;overflow:hidden}
+#loading .fill{height:100%;background:linear-gradient(90deg,#e94560,#ff6b6b);border-radius:3px;transition:width .3s;width:0%}
+#loading .text{color:#888;font-size:14px}
+#loading .title{color:#e94560;font-size:28px;font-weight:700;margin-bottom:8px}
+#hud{position:fixed;top:0;left:0;right:0;z-index:10;pointer-events:none;display:none;padding:16px 20px}
+#hud>*{pointer-events:none}
+.hp-bar{width:240px;height:18px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.15);border-radius:9px;overflow:hidden;margin-bottom:8px}
+.hp-bar .fill{height:100%;background:linear-gradient(90deg,#e94560,#ff4757);border-radius:8px;transition:width .3s}
+.hp-bar .label{position:absolute;width:100%;text-align:center;color:#fff;font-size:12px;line-height:18px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+#score{color:#ffd700;font-size:20px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.7)}
+#wave{color:#00d4ff;font-size:20px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.7)}
+#level{color:#ffd700;font-size:20px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.7)}
+#enemy-count{color:#ff6b6b;font-size:16px}
+#hud-top{display:flex;justify-content:space-between;align-items:flex-start}
+#hud-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+#atk-cd{width:50px;height:50px;border:3px solid rgba(255,255,255,.3);border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center}
+#atk-cd.ready{border-color:#ffd700;box-shadow:0 0 12px rgba(255,215,0,.5)}
+#atk-cd .inner{color:#fff;font-size:12px;font-weight:700}
+#msg{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#ffd700;font-size:36px;font-weight:700;z-index:20;pointer-events:none;opacity:0;transition:opacity .3s;text-shadow:0 0 20px rgba(255,215,0,.8)}
+#msg.show{opacity:1}
+#gameover{position:fixed;top:0;left:0;right:0;bottom:0;z-index:30;pointer-events:none;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,0,0,.7)}
+#gameover.show{display:flex;pointer-events:auto}
+#gameover .title{color:#e94560;font-size:52px;font-weight:700;margin-bottom:12px;text-shadow:0 0 30px rgba(233,69,96,.6)}
+#gameover .sub{color:#aaa;font-size:18px;margin-bottom:24px}
+#gameover .restart{background:rgba(233,69,96,.9);color:#fff;border:none;padding:12px 36px;font-size:18px;border-radius:8px;cursor:pointer;font-weight:700;transition:all .2s}
+#gameover .restart:hover{background:#e94560;box-shadow:0 0 20px rgba(233,69,96,.5);transform:scale(1.05)}
+#controls{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10;color:rgba(255,255,255,.4);font-size:12px;text-align:center;pointer-events:none;display:none}
+#controls span{display:inline-block;background:rgba(255,255,255,.08);padding:3px 8px;border-radius:4px;margin:0 2px}
+#controls .key{color:#ffd700}
+#mode-btn{position:fixed;top:16px;right:16px;z-index:30;padding:8px 16px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(20,20,50,.85);color:#ccc;cursor:pointer;font-size:13px;backdrop-filter:blur(10px);transition:all .2s}
+#mode-btn:hover{border-color:#e94560;color:#e94560}
+.enemy-hp{position:absolute;width:40px;height:5px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);border-radius:2px;overflow:hidden;pointer-events:none}
+.enemy-hp .fill{height:100%;background:linear-gradient(90deg,#e94560,#ff4757);border-radius:2px;transition:width .2s}
+#weapon-slot{position:fixed;right:20px;bottom:20px;z-index:10;pointer-events:none;display:none;text-align:right;background:rgba(10,10,20,.7);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;backdrop-filter:blur(8px)}
+#weapon-slot .wname{font-size:17px;font-weight:700;color:#ffd700;text-shadow:0 2px 6px rgba(0,0,0,.8)}
+#weapon-slot .wammo{font-size:24px;font-weight:700;color:#fff;letter-spacing:1px;text-shadow:0 2px 6px rgba(0,0,0,.8)}
+#weapon-slot .wammo .max{font-size:14px;color:#888}
+#weapon-slot.melee .wname{color:#7fd1ff}
+#weapon-slot.low .wammo{color:#ff6b6b}
+#pickup-tip{position:fixed;bottom:120px;left:50%;transform:translateX(-50%);z-index:10;pointer-events:none;display:none;color:#ffd700;font-size:15px;font-weight:700;background:rgba(10,10,20,.75);border:1px solid rgba(255,215,0,.4);border-radius:8px;padding:6px 14px;text-shadow:0 2px 6px rgba(0,0,0,.8)}
+#buffs{position:fixed;left:20px;bottom:20px;z-index:10;pointer-events:none;display:none;flex-direction:column;gap:6px}
+.buff{display:flex;align-items:center;gap:8px;background:rgba(10,10,20,.7);border:1px solid rgba(95,224,255,.45);border-radius:8px;padding:5px 10px;backdrop-filter:blur(8px)}
+.buff .bname{color:#5fe0ff;font-size:13px;font-weight:700;white-space:nowrap}
+.buff .btime{color:#fff;font-size:13px;font-weight:700;min-width:32px;text-align:right}
+.buff .bbar{width:70px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden}
+.buff .bbar i{display:block;height:100%;background:linear-gradient(90deg,#2bb3d9,#5fe0ff);border-radius:2px}
+#dmg-layer{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9;overflow:hidden;display:none}
+.dmg{position:absolute;font-size:18px;font-weight:700;text-shadow:0 2px 6px rgba(0,0,0,.9);white-space:nowrap;transform:translate(-50%,-50%)}
+.dmg.crit{font-size:24px}
+.enemy-hp .num{position:absolute;width:100%;text-align:center;top:-15px;color:#fff;font-size:10px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.9);display:none}
+.enemy-hp.shownum .num{display:block}
+#set-btn{position:fixed;top:16px;right:150px;z-index:30;padding:8px 12px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(20,20,50,.85);color:#ccc;cursor:pointer;font-size:13px;backdrop-filter:blur(10px);transition:all .2s}
+#set-btn:hover{border-color:#ffd700;color:#ffd700}
+#settings{position:fixed;top:60px;right:16px;z-index:31;display:none;background:rgba(12,12,24,.95);border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:14px 16px;backdrop-filter:blur(12px);min-width:210px;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+#settings.show{display:block}
+#settings h4{color:#ffd700;font-size:14px;margin-bottom:10px;font-weight:700}
+#settings label{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#ccc;font-size:13px;padding:6px 0;cursor:pointer}
+#settings label:hover{color:#fff}
+#settings input[type=checkbox]{appearance:none;width:36px;height:19px;border-radius:10px;background:rgba(255,255,255,.15);position:relative;cursor:pointer;transition:background .2s;flex:0 0 auto}
+#settings input[type=checkbox]::after{content:'';position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#fff;transition:left .2s}
+#settings input[type=checkbox]:checked{background:#e94560}
+#settings input[type=checkbox]:checked::after{left:19px}
+#settings .hintrow{color:#666;font-size:11px;margin-top:8px;border-top:1px solid rgba(255,255,255,.1);padding-top:8px}
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<div id="enemyHpContainer" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;display:none"></div>
+
+<div id="loading">
+  <div class="title">🥊 星际格斗</div>
+  <div class="bar"><div class="fill" id="loadFill"></div></div>
+  <div class="text" id="loadText">加载模型中...</div>
+</div>
+
+<div id="hud">
+  <div id="hud-top">
+    <div>
+      <div class="hp-bar"><div class="fill" id="hpFill" style="width:100%"></div><div class="label" id="hpLabel">100 / 100</div></div>
+    </div>
+    <div style="display:flex;gap:24px;align-items:center">
+      <div id="wave">🌊 第 1 波</div>
+      <div id="level">🎖️ Lv.1</div>
+      <div id="score">⭐ 0</div>
+      <div id="atk-cd" class="ready"><span class="inner">J</span></div>
+    </div>
+  </div>
+  <div id="hud-bottom">
+    <div id="enemy-count">剩余敌人: 2</div>
+  </div>
+</div>
+
+<div id="msg"></div>
+
+<div id="weapon-slot" class="melee">
+  <div class="wname" id="wName">👊 拳头</div>
+  <div class="wammo" id="wAmmo">∞</div>
+</div>
+
+<div id="pickup-tip">按 <span style="color:#fff">F</span> 拾取</div>
+<div id="buffs"></div>
+<div id="dmg-layer"></div>
+
+<button id="set-btn" onclick="toggleSettings()">⚙️ 设置</button>
+<div id="settings">
+  <h4>⚙️ 显示设置</h4>
+  <label>敌人血条 <input type="checkbox" id="setHpBar" checked></label>
+  <label>血量数值 <input type="checkbox" id="setHpNum"></label>
+  <label>伤害数字 <input type="checkbox" id="setDmgNum" checked></label>
+  <div class="hintrow">按 P 键可快速开关本面板</div>
+</div>
+
+<div id="gameover">
+  <div class="title">💀 游戏结束</div>
+  <div class="sub">最终得分: <span id="final-score">0</span></div>
+  <button class="restart" onclick="restartGame()">🔄 再来一局</button>
+</div>
+
+<div id="controls">
+  <span class="key">WASD</span><span>移动</span>
+  <span class="key">Shift</span><span>跑步</span>
+  <span class="key">J</span><span>攻击/射击</span>
+  <span class="key">Space</span><span>跳跃</span>
+  <span class="key">F</span><span>拾取</span>
+  <span class="key">Q/E</span><span>转视角</span>
+  <span class="key">Z/X</span><span>缩放</span>
+  <span class="key">R</span><span>重来</span>
+</div>
+
+<button id="mode-btn" onclick="toggleMode()">🎮 进入格斗</button>
+
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { createLoader } from './js/shared.js';
+import {
+  initGameEngine, buildArena, createSunLight, loadGameModels,
+  createGame, bindUI, startGame, exitGame, restartGame,
+  gameLoop, setupInput, setupResize, initPreview
+} from './js/game.js';
+
+// --- 引擎初始化 ---
+const { renderer, scene, camera } = initGameEngine();
+
+// --- 灯光 ---
+scene.add(new THREE.AmbientLight('#ffffff', 3));
+createSunLight(scene);
+const fillLight = new THREE.DirectionalLight('#ffffff', 2);
+fillLight.position.set(-5, 4, -5);
+scene.add(fillLight);
+
+// --- 竞技场 ---
+buildArena(scene);
+
+// --- 加载器 & 游戏 ---
+const { loader } = createLoader();
+const game = createGame(renderer, scene, camera, loader);
+bindUI(game);
+
+// --- 全局函数（HTML onclick 需要）---
+window.toggleSettings = function() { game.ui.settingsEl.classList.toggle('show'); };
+window.toggleMode = function() { game.gameRunning ? exitGame(game) : startGame(game); };
+window.restartGame = function() { restartGame(game); };
+
+// --- 输入 & 响应式 ---
+setupInput(game, renderer.domElement);
+setupResize(game);
+
+// --- 启动 ---
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  gameLoop(game, Math.min(clock.getDelta(), 0.1));
+}
+
+loadGameModels(loader, function(name, loaded, total) {
+  document.getElementById('loadFill').style.width = (loaded/total*100)+'%';
+  document.getElementById('loadText').textContent = '加载 ' + name + '... (' + loaded + '/' + total + ')';
+}).then(async function() {
+  document.getElementById('loading').style.display = 'none';
+  await initPreview(game);
+  animate();
+});
+</script>
+</body>
+</html>
