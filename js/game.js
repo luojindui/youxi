@@ -818,7 +818,7 @@ export function updateGame(game, dt) {
         else if(p.invincibleTimer<=0){p.hp-=e.damage;p.invincibleTimer=0.5;p.hurtTimer=0.5;
           const kbDir=new THREE.Vector3(pPos.x-ePos.x,0,pPos.z-ePos.z).normalize();p.knockback.set(kbDir.x*5,3,kbDir.z*5);
           spawnHitEffect(game,pPos);spawnDamageNumber(game,pPos.clone().setY(pPos.y+0.9),e.damage,'#ff4757');
-          if(p.hp<=0){p.hp=0;onPlayerDeath(game);}}}
+          if(p.hp<=0){p.hp=0;onPlayerDeath(game);}}
       }else{if(e.currentAnim!=='idle'&&e.actions.idle)crossfadeAnim(e,'idle');}
     }else{e.state='chase';
       e.group.position.x+=(dx/dist)*e.speed*dt;e.group.position.z+=(dz/dist)*e.speed*dt;
