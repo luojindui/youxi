@@ -72,7 +72,7 @@ cd media && node --check js/shared.js && node --check js/game.js && node --check
 
 所有平衡数值（玩家属性、等级系统、敌人属性、武器与枪械参数、消耗道具、掉落率、波次规则、场景 / 相机常量）已抽到独立文档：
 
-👉 **[数值表.md](数值表.md)**
+👉 **[VALUES.md](VALUES.md)**
 
 调平衡对照该表改 `game.js` 约 14-86 行的 `ENEMY_STATS` / `WEAPONS` / `FIST` / `HEART` / `SPEED` 及掉落率 / 等级常量即可。
 
